@@ -105,7 +105,7 @@ post({type:'ready'});reportHeight(true);
   seek.max=String(length);if(!dragging)seek.value=String(time);
   seek.style.setProperty('--progress',(Math.max(0,Math.min(1,time/length))*100)+'%');
   seek.setAttribute('aria-valuetext',format(time)+' / '+format(length));
-  $('elapsed').textContent=format(time);$('duration').textContent=format(length);updateLyrics(time);
+  $('elapsed').textContent=format(time);$('duration').textContent=format(length);updateLyrics(audio.currentTime);
  }
  function tick(){update();if(!audio.paused&&!audio.ended)raf=requestAnimationFrame(tick);}
  function state(){
@@ -127,9 +127,10 @@ post({type:'ready'});reportHeight(true);
  ['loadedmetadata','durationchange','timeupdate','seeked'].forEach(event=>audio.addEventListener(event,update));
  audio.addEventListener('error',()=>{status.textContent='音频无法加载，请刷新页面重试。';player.classList.remove('is-playing');cover.setAttribute('aria-pressed','false');cover.setAttribute('aria-label','播放');cancelAnimationFrame(raf);});
  seek.addEventListener('pointerdown',()=>{dragging=true;manualUntil=0;});
- seek.addEventListener('input',()=>{manualUntil=0;seekTo(Number(seek.value));});
+ seek.addEventListener('input',()=>{manualUntil=0;if(dragging)update();else seekTo(Number(seek.value));});
  const finishSeek=()=>{if(!dragging)return;const t=Number(seek.value);dragging=false;seekTo(t);};
- window.addEventListener('pointerup',finishSeek);window.addEventListener('pointercancel',finishSeek);seek.addEventListener('change',finishSeek);seek.addEventListener('blur',finishSeek);
+ const cancelSeek=()=>{if(!dragging)return;dragging=false;update();};
+ window.addEventListener('pointerup',finishSeek);window.addEventListener('pointercancel',cancelSeek);seek.addEventListener('change',finishSeek);seek.addEventListener('blur',finishSeek);
  let resumeTimer;
  const manualScroll=()=>{manualUntil=Date.now()+2800;clearTimeout(resumeTimer);resumeTimer=setTimeout(()=>center(),2850);};
  viewport.addEventListener('wheel',manualScroll,{passive:true});viewport.addEventListener('touchmove',manualScroll,{passive:true});
