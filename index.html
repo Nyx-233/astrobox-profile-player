@@ -6,36 +6,48 @@
   <meta name="color-scheme" content="light dark">
   <meta name="description" content="用于 AstroBox 个人主页的极简音乐播放器，支持 SPL 双语歌词与翻译切换。">
   <title>AstroBox 音乐播放器</title>
-  <link rel="stylesheet" href="assets/css/player.css">
+  <link rel="stylesheet" href="assets/css/player.css?v=20261019-row-spring">
   <script type="module" src="assets/js/astrobox.js"></script>
-  <script type="module" src="assets/js/player.js"></script>
+  <script type="module" src="assets/js/player.js?v=20261019-startup-anchor"></script>
 </head>
 <body>
-  <main class="player" id="player" aria-label="音乐播放器">
+  <main class="player no-lyrics" id="player" aria-label="音乐播放器">
     <section class="record" aria-label="歌曲">
       <h1 id="title">正在载入歌曲…</h1>
       <div class="cover-space">
-        <button class="cover" id="cover" type="button" aria-label="播放" aria-pressed="false" title="点击封面播放或暂停">
-          <img id="artwork" alt="专辑封面" width="800" height="800" draggable="false">
+        <button class="cover" id="cover" type="button" aria-label="播放" aria-pressed="false" title="点击封面播放或暂停" disabled>
+          <img id="artwork" src="assets/images/cover-placeholder.svg" alt="专辑封面" width="800" height="800" draggable="false">
         </button>
       </div>
       <div class="progress">
         <input class="seek" id="seek" type="range" min="0" max="1" step="0.01" value="0" aria-label="播放进度">
         <div class="times" aria-hidden="true"><span id="elapsed">00:00</span><span id="duration">00:00</span></div>
       </div>
-      <div class="toolbar" aria-label="歌词显示设置">
-        <button class="tool translation-toggle" id="translation-toggle" type="button" aria-label="显示歌词翻译" aria-pressed="true" aria-controls="lyric-list" title="显示或隐藏歌词翻译" disabled>
-          <span class="translation-icon" aria-hidden="true">译</span>
-          <span>翻译</span><span class="toggle-dot" aria-hidden="true"></span>
+      <div class="toolbar" id="translation-toolbar" aria-label="歌词显示设置" hidden>
+        <button class="tool translation-toggle" id="translation-toggle" type="button" aria-label="显示歌词翻译" aria-pressed="true" aria-controls="lyric-list" title="隐藏歌词翻译" hidden disabled>
+          <svg class="translation-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+            <defs>
+              <path id="translation-glyph" d="M12 7v3M6.5 10h13M16.5 10c-.8 5-4.2 9.5-9 12M9 13.5c1.5 3.8 4.2 6.5 7 8M18 24l4-11 4 11M19.4 20h5.2" />
+              <mask id="translation-cutout" maskUnits="userSpaceOnUse" x="0" y="0" width="32" height="32">
+                <rect width="32" height="32" fill="white" />
+                <use href="#translation-glyph" fill="none" stroke="black" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              </mask>
+            </defs>
+            <g class="translation-outline" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="28" height="28" rx="6" stroke-width="1.3" opacity=".55" />
+              <use href="#translation-glyph" stroke-width="1.8" />
+            </g>
+            <rect class="translation-filled" x="2" y="2" width="28" height="28" rx="6" fill="currentColor" mask="url(#translation-cutout)" />
+          </svg>
         </button>
       </div>
     </section>
-    <section class="lyrics at-start" id="lyrics" aria-label="歌词，点击可跳转">
+    <section class="lyrics at-start" id="lyrics" aria-label="歌词，点击可跳转" hidden>
       <div class="lyric-list" id="lyric-list" aria-busy="true"></div>
     </section>
     <p class="status" id="status" role="status" aria-live="polite"></p>
   </main>
-  <audio id="audio" preload="metadata" src="assets/audio/track.mp3"></audio>
+  <audio id="audio" preload="auto" data-src="assets/audio/track.mp3"></audio>
   <noscript>请开启 JavaScript 以使用播放器。</noscript>
 </body>
 </html>
