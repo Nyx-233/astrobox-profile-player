@@ -1,8 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { parseSPL } from '../assets/js/spl.js';
-import { parseID3, normalizeEmbeddedLyrics } from '../assets/js/id3.js';
+import { parseSPL, parseLyrics } from '../assets/js/spl.js';
 
 test('same timestamp: first text is original; later nonadjacent texts are translations', () => {
   const lines = parseSPL('[00:01.2]原文\n[00:02]次句\n[0:1.200000]译文\n[00:01.20]Translation');
@@ -46,12 +44,14 @@ test('line display strips word stamps without treating them as repeated lyrics',
   assert.equal(lines.length, 1);assert.equal(lines[0].original, '你好');
   assert.equal(lines[0].end, 4);assert.deepEqual(lines[0].translations, ['Hello']);
 });
-test('bundled song has 26 bilingual lyric groups, preserving supplied text', () => {
-  const source = normalizeEmbeddedLyrics(parseID3(readFileSync(new URL('../assets/audio/track.mp3', import.meta.url))).lyrics);
-  const lines = parseSPL(source).filter(x => !/^(作词|作曲)\s*:/.test(x.original));
-  assert.equal(lines.length, 26);
-  assert(lines.every(line => line.translations.length === 1));
-  assert.equal(lines[4].time, 11);
-  assert.equal(lines[4].original, '変わらないはずはないよ 手を伸ばして');
-  assert.equal(lines[4].translations[0], '一切并非无法改变 伸出手吧');
+test('plain embedded lyrics remain visible without inventing seek timestamps',()=>{
+  const lines=parseLyrics('Line one\nLine two');
+  assert.deepEqual(lines.map(line=>line.original),['Line one','Line two']);
+  assert(lines.every(line=>line.time===null && line.translations.length===0));
+});
+test('timed text is preserved, including credit-like lyric text',()=>{
+  const lines=parseLyrics('[00:00]作词：示例\n[00:05]Original\nTranslation');
+  assert.equal(lines.length,2);
+  assert.equal(lines[0].original,'作词：示例');
+  assert.deepEqual(lines[1].translations,['Translation']);
 });
