@@ -46,12 +46,13 @@ button {
   touch-action:manipulation;
 }
 .player {
-  max-width:1040px;
+  /* Grow with the iframe so wider cards do not accumulate empty side bands. */
+  width:100%;
   margin:auto;
-  padding:36px clamp(22px,4vw,48px) 28px;
+  padding:36px clamp(22px,4vw,72px) 28px;
   display:grid;
   grid-template-columns:minmax(230px,.92fr) minmax(0,1.15fr);
-  column-gap:clamp(30px,6vw,76px);
+  column-gap:clamp(30px,5vw,96px);
   align-items:center;
 }
 .record {
@@ -73,7 +74,7 @@ h1 {
 .cover {
   display:block;
   width:100%;
-  max-width:340px;
+  max-width:clamp(340px,28vw,400px);
   aspect-ratio:1;
   border:0;
   padding:0;
@@ -189,6 +190,10 @@ h1 {
   mask-image:linear-gradient(#000 0%,#000 85%,transparent);
   -webkit-mask-image:linear-gradient(#000 0%,#000 85%,transparent);
 }
+/* Keep the desktop lyric column in place before the audio metadata arrives. */
+.player.is-loading .lyrics {
+  visibility:hidden;
+}
 .lyrics::-webkit-scrollbar {
   display:none;
 }
@@ -278,6 +283,9 @@ h1 {
     max-width:420px;
     height:246px;
   }
+  .player.is-loading .lyrics {
+    display:none;
+  }
   .lyric-list {
     padding:calc(6px + var(--lyric-headroom,0px)) 3px calc(108px + var(--lyric-tailroom,0px));
   }
@@ -295,18 +303,6 @@ h1 {
   }
   .status {
     text-align:center;
-  }
-}
-@media(prefers-reduced-motion:reduce) {
-  .cover {
-    transition:none;
-  }
-  .cover img {
-    animation:none;
-  }
-  .line {
-    transition:none;
-    filter:none;
   }
 }
 /* The icon stays transparent through its glyph, even over a wallpaper. */
@@ -351,10 +347,6 @@ h1 {
 .translation-content { display:block; overflow:hidden; }
 .player.hide-translations .translations { height:0; opacity:0; }
 .line:active { transform:scale(.985); }
-@media(prefers-reduced-motion:reduce) {
-  .tool,.translation-outline,.translation-filled,.translations { transition:none; }
-  .translations,.line:active { transform:none; }
-}
 .cover img:not([src]) { visibility:hidden; }
 
 .player.no-lyrics { grid-template-columns:minmax(0,420px); justify-content:center; }
