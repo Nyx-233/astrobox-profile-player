@@ -17,7 +17,6 @@ const list = $('lyric-list');
 const status = $('status');
 const translationToggle = $('translation-toggle');
 const translationToolbar = $('translation-toolbar');
-const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const placeholderArtwork = new URL('../images/cover-placeholder.svg', import.meta.url).href;
 const preferenceKey = 'astrobox-profile-player:translation';
 let metadata = {
@@ -85,7 +84,7 @@ function center(smooth = true, clickedButton = null) {
     anchor.offset = position;
     restoreLyricAnchor(anchor);
   }
-  if (!smooth || reducedMotion.matches) {
+  if (!smooth) {
     cancelCenter();
     layout(destination);
     return;
@@ -201,7 +200,7 @@ function applyTranslationPreference(animate = false) {
   scrollMotion.pause();
   cancelAnimationFrame(translationFrame);
   translationAnchor = animate ? captureAnchor(viewport, buttons) : null;
-  translationAnimating = animate && !reducedMotion.matches;
+  translationAnimating = animate;
   // Initial highlighting is visual only. Actual playback or a selected time
   // activates follow; toggling translation never activates it by itself.
   translationFollowing = animate && followActivated && !manuallyBrowsing && !!buttons[active];
@@ -440,10 +439,13 @@ async function loadTrack() {
       status.textContent = '无法读取音频内嵌信息，音乐仍可播放。';
     }
     update();
-    reportHeight();
   } catch {
+    viewport.hidden = true;
+    player.classList.toggle('no-lyrics', true);
     list.setAttribute('aria-busy', 'false');
     status.textContent = '音频文件未完整加载，请刷新页面重试。';
+  } finally {
+    player.classList.remove('is-loading');
     reportHeight();
   }
 }
