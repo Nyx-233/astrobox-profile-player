@@ -71,3 +71,12 @@ export function parseSPL(source) {
     };
   });
 }
+
+/** Plain embedded lyrics remain readable when no line timing is available. */
+export function parseLyrics(source) {
+  const timed = parseSPL(source);
+  if (timed.length) return timed;
+  return source.replace(/^\uFEFF/, '').split(/\r\n?|\n/).map(text => text.trim())
+    .filter(text => text && !/^\[(?:[a-z][a-z0-9_-]*:|\d)/i.test(text))
+    .map(original => ({time:null,end:null,original,translations:[]}));
+}
