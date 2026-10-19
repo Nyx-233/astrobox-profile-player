@@ -6,12 +6,12 @@
   <meta name="color-scheme" content="light dark">
   <meta name="description" content="用于 AstroBox 个人主页的极简音乐播放器，支持 SPL 双语歌词与翻译切换。">
   <title>AstroBox 音乐播放器</title>
-  <link rel="stylesheet" href="assets/css/player.css?v=20261019-fluid-width">
+  <link rel="stylesheet" href="assets/css/player.css?v=20261019-row-spring">
   <script type="module" src="assets/js/astrobox.js"></script>
-  <script type="module" src="assets/js/player.js?v=20261019-desktop-loading"></script>
+  <script type="module" src="assets/js/player.js?v=20261019-startup-anchor"></script>
 </head>
 <body>
-  <main class="player is-loading" id="player" aria-label="音乐播放器">
+  <main class="player no-lyrics" id="player" aria-label="音乐播放器">
     <section class="record" aria-label="歌曲">
       <h1 id="title">正在载入歌曲…</h1>
       <div class="cover-space">
@@ -42,7 +42,7 @@
         </button>
       </div>
     </section>
-    <section class="lyrics at-start" id="lyrics" aria-label="歌词，点击可跳转">
+    <section class="lyrics at-start" id="lyrics" aria-label="歌词，点击可跳转" hidden>
       <div class="lyric-list" id="lyric-list" aria-busy="true"></div>
     </section>
     <p class="status" id="status" role="status" aria-live="polite"></p>
