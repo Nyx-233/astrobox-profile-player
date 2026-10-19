@@ -28,6 +28,13 @@ class Element {
 
 test('SPL loading, toggle, iframe protocol and existing playback behaviors', async t => {
   const elements = Object.fromEntries(['audio','player','cover','seek','lyrics','lyric-list','status','elapsed','duration','title','translation-toggle','translation-toolbar','artwork'].map(id => [id,new Element()]));
+  const html = readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  const initialPlayerClasses = html.match(/<main class="([^"]+)"/)[1].split(/\s+/);
+  const initialLyricsHidden = /\shidden(?:\s|>)/.test(html.match(/<section[^>]*id="lyrics"[^>]*>/)[0]);
+  elements.player.classes = new Set(initialPlayerClasses);
+  elements.lyrics.hidden = initialLyricsHidden;
+  let releaseTrack;
+  const trackGate = new Promise(resolve => { releaseTrack = resolve; });
   elements.title.textContent = '正在载入音频…';
   const baseURI = 'https://example.test/player/';
   elements.audio.dataset.src = 'assets/audio/track.mp3';
@@ -55,13 +62,23 @@ test('SPL loading, toggle, iframe protocol and existing playback behaviors', asy
     matchMedia: () => motionPreference,
     localStorage: { getItem: key => stored.get(key), setItem: (key,value) => stored.set(key,value) },
     fetch: async (_path, options = {}) => {
+      await trackGate;
       const full = makeMP3();
       const range = options.headers?.Range?.match(/bytes=(\d+)-(\d+)/);
       const bytes = range ? full.subarray(Number(range[1]),Number(range[2])+1) : full;
       return {ok:true,status:range?206:200,arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)};
     },
   });
-  const { ready } = await import('../assets/js/player.js'); await ready;
+  const { ready } = await import('../assets/js/player.js');
+  // A slow download must retain the desktop columns before lyrics are known.
+  assert(elements.player.classes.has('is-loading'));
+  assert(!elements.player.classes.has('no-lyrics'));
+  assert.equal(elements.lyrics.hidden,false);
+  assert.equal(elements['lyric-list'].children.length,0);
+  releaseTrack(); await ready;
+  assert(!elements.player.classes.has('is-loading'));
+  assert(!elements.player.classes.has('no-lyrics'));
+  assert.equal(elements.lyrics.hidden,false);
   const flush = () => { const callbacks = [...frames.values()]; frames.clear(); callbacks.forEach(fn => fn(now)); };
   const advance = ms => {
     const end=now+ms;
@@ -101,12 +118,19 @@ test('SPL loading, toggle, iframe protocol and existing playback behaviors', asy
     await elements['translation-toggle'].emit('click');
     for(let tick=0;tick<125;tick++){advance(8);assertStartupPosition();}
   }
-  // Reduced motion and reversal before a transition finishes preserve it too.
+  // Reversals and system motion preferences preserve the initial anchor too.
   await elements['translation-toggle'].emit('click');advance(300);assertStartupPosition();
   await elements['translation-toggle'].emit('click');advance(1200);assertStartupPosition();
   motionPreference.matches=true;
   await elements['translation-toggle'].emit('click');assertStartupPosition();
+  advance(110);assertStartupPosition();
+  const startupTranslation=rows[0].querySelector('.translations');
+  const fadingOpacity=Number(startupTranslation.style.opacity);
+  assert(fadingOpacity>0 && fadingOpacity<1);
   await elements['translation-toggle'].emit('click');assertStartupPosition();
+  advance(55);assertStartupPosition();
+  assert(Number(startupTranslation.style.opacity)>fadingOpacity && Number(startupTranslation.style.opacity)<1);
+  advance(1200);assertStartupPosition();
   motionPreference.matches=false;
   assert.equal(elements.title.textContent,'Fixture track');
   assert.equal(rows[0].querySelector('.original').lang,'en');
@@ -339,10 +363,12 @@ test('SPL loading, toggle, iframe protocol and existing playback behaviors', asy
 
   advance(3000); advance(1400);
   motionPreference.matches = true;
+  const animatedClickStart=elements.lyrics.scrollTop;
   await rows[20].emit('click');
-  const beforeReduced = elements.lyrics.scrollTop;
-  assert.equal(beforeReduced,centeredTop(20));
-  advance(520); assert.equal(elements.lyrics.scrollTop,beforeReduced);
+  assert.equal(elements.lyrics.scrollTop,animatedClickStart);
+  advance(160);
+  assert(elements.lyrics.scrollTop>animatedClickStart && elements.lyrics.scrollTop<centeredTop(20));
+  advance(1400);assertCentered(20);
   motionPreference.matches = false;
   // Toggling during an unfinished click animation keeps returning to playback.
   await rows[22].emit('click');
@@ -394,7 +420,7 @@ test('SPL loading, toggle, iframe protocol and existing playback behaviors', asy
   advance(100);assert(elements.lyrics.scrollTop>centeredTop(10));
   advance(1400);assertCentered(11);
 
-  // Every toggle, including rapid reversals and reduced motion, centers at the
+  // Every toggle, including when the OS requests reduced motion, centers at the
   // first/last rows too. These bounds use the same padding/anchor solver.
   elements.audio.currentTime = 0; await elements.audio.emit('timeupdate');
   elements.lyrics.scrollTop = 0;
@@ -415,8 +441,10 @@ test('SPL loading, toggle, iframe protocol and existing playback behaviors', asy
   assert.equal(elements.lyrics.scrollTop,180);
   assert(elements.lyrics.classes.has('is-browsing'));
   advance(999);assert.equal(elements.lyrics.scrollTop,180);
-  advance(1);assertCentered(14);
+  advance(1);assert.equal(elements.lyrics.scrollTop,180);
   assert(!elements.lyrics.classes.has('is-browsing'));
+  advance(260);assert(elements.lyrics.scrollTop>180 && elements.lyrics.scrollTop<centeredTop(14));
+  advance(1400);assertCentered(14);
   motionPreference.matches=false;
 
   // Playback changes cannot restore blur while the reader is browsing.
@@ -443,12 +471,16 @@ test('SPL loading, toggle, iframe protocol and existing playback behaviors', asy
     {tagged:false,v1Title:'Legacy title'},
   ];
   for (let i=0;i<scenarios.length;i++) {
+    elements.player.classes = new Set(initialPlayerClasses);
+    elements.lyrics.hidden = initialLyricsHidden;
     const bytes=makeMP3(scenarios[i]);
     globalThis.fetch=async()=>({ok:true,status:200,arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)});
     elements.audio.dataset.src='assets/audio/untitled%20file.mp3';
     elements['translation-toggle']=new Element(); elements['translation-toggle'].hidden=true;
     elements['translation-toolbar']=new Element(); elements['translation-toolbar'].hidden=true;
     const {ready}=await import('../assets/js/player.js?scenario='+i);await ready;
+    assert(!elements.player.classes.has('is-loading'));
+    assert.equal(elements.player.classes.has('no-lyrics'),i>=2);
     assert.equal(elements['translation-toggle'].hidden,true);
     assert.equal(elements['translation-toolbar'].hidden,true);
     assert.equal(elements.title.textContent,i===4?'Legacy title':'untitled file');
@@ -480,6 +512,17 @@ test('SPL loading, toggle, iframe protocol and existing playback behaviors', asy
   await elements['translation-toggle'].emit('click');advance(400);
   assert.notEqual(elements['translation-toggle'].attributes['aria-pressed'],pressed);
 
+  // A failed download exits the reserved layout and exposes the error message.
+  elements.player.classes = new Set(initialPlayerClasses);
+  elements.lyrics.hidden = initialLyricsHidden;
+  globalThis.fetch = async () => { throw new Error('Network unavailable'); };
+  const failedPlayer = await import('../assets/js/player.js?loading-failure');
+  await failedPlayer.ready;
+  assert(!elements.player.classes.has('is-loading'));
+  assert(elements.player.classes.has('no-lyrics'));
+  assert.equal(elements.lyrics.hidden,true);
+  assert.equal(elements['lyric-list'].attributes['aria-busy'],'false');
+  assert.equal(elements.status.textContent,'音频文件未完整加载，请刷新页面重试。');
 });
 
 test('all HTML asset paths exist and the page has no embedded audio or navigation UI', () => {
