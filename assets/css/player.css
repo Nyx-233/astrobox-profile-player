@@ -179,6 +179,7 @@ h1 {
   height:382px;
   overflow-y:auto;
   overscroll-behavior:contain;
+  overflow-anchor:none;
   scrollbar-width:none;
   position:relative;
   mask-image:linear-gradient(transparent,#000 15%,#000 85%,transparent);
@@ -192,10 +193,11 @@ h1 {
   display:none;
 }
 .lyric-list {
-  padding:12px 3px 172px;
+  padding:calc(12px + var(--lyric-headroom,0px)) 3px calc(172px + var(--lyric-tailroom,0px));
 }
 .line {
   display:block;
+  translate:0 var(--translation-shift,0px);
   border:0;
   width:100%;
   padding:13px 0;
@@ -216,13 +218,16 @@ h1 {
   opacity:1;
   filter:none;
 }
-.jp {
+.lyrics.is-browsing .line {
+  filter:blur(0);
+}
+.original {
   display:block;
   font-size:clamp(18px,2.2vw,25px);
   font-weight:600;
   letter-spacing:.015em;
 }
-.cn {
+.translation {
   display:block;
   font-size:clamp(13px,1.6vw,16px);
   font-weight:500;
@@ -230,7 +235,7 @@ h1 {
   opacity:.83;
   line-height:1.65;
 }
-.line.active .jp {
+.line.active .original {
   font-weight:650;
 }
 .status {
@@ -274,17 +279,17 @@ h1 {
     height:246px;
   }
   .lyric-list {
-    padding:6px 3px 108px;
+    padding:calc(6px + var(--lyric-headroom,0px)) 3px calc(108px + var(--lyric-tailroom,0px));
   }
   .line {
     text-align:center;
     padding:11px 0;
     transform-origin:center;
   }
-  .jp {
+  .original {
     font-size:19px;
   }
-  .cn {
+  .translation {
     font-size:13px;
     margin-top:5px;
   }
@@ -304,91 +309,53 @@ h1 {
     filter:none;
   }
 }
-/* Quiet, monochrome controls: no background panel or extra player buttons. */
-[hidden] {
-  display:none!important;
-}
+/* The icon stays transparent through its glyph, even over a wallpaper. */
+[hidden] { display:none!important; }
 .toolbar {
   display:flex;
-  align-items:center;
   justify-content:flex-end;
-  gap:16px;
-  margin-top:12px;
+  margin-top:8px;
 }
 .tool {
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:7px;
-  min-height:36px;
-  padding:0 11px;
-  border:1px solid var(--rail);
-  border-radius:999px;
+  display:grid;
+  place-items:center;
+  width:44px;
+  height:44px;
+  padding:4px;
+  border:0;
+  border-radius:10px;
   background:transparent;
-  color:var(--muted);
-  font:inherit;
-  font-size:12px;
-  font-weight:500;
-  text-decoration:none;
-  cursor:pointer;
-  transition:color .2s,border-color .2s,transform .2s;
-  white-space:nowrap;
-  -webkit-tap-highlight-color:transparent;
-}
-.tool:focus-visible {
-  outline:2px solid var(--ink);
-  outline-offset:4px;
-}
-.tool:active {
-  transform:scale(.97);
-}
-.tool:disabled {
-  opacity:.45;
-  cursor:default;
-}
-.translation-icon {
-  font-size:12px;
-  line-height:1;
-  border:1px solid currentColor;
-  border-radius:3px;
-  padding:2px;
-}
-.translation-toggle[aria-pressed="true"] {
   color:var(--ink);
+  cursor:pointer;
+  opacity:.65;
+  transition:opacity .25s,transform .25s;
 }
-.toggle-dot {
-  width:5px;
-  height:5px;
-  border-radius:50%;
-  background:currentColor;
-  opacity:.25;
-  transition:opacity .2s;
-}
-.translation-toggle[aria-pressed="true"] .toggle-dot {
-  opacity:1;
-}
+.tool:active { transform:scale(.92); }
+.translation-icon { display:block; width:32px; height:32px; }
+.translation-outline,.translation-filled { transition:opacity .25s; }
+.translation-filled { opacity:0; }
+.translation-toggle[aria-pressed="true"] { opacity:.9; }
+.translation-toggle[aria-pressed="true"] .translation-filled { opacity:1; }
+.translation-toggle[aria-pressed="true"] .translation-outline { opacity:0; }
 @media(hover:hover) and (pointer:fine) {
-  .tool:not(:disabled):hover {
-    color:var(--ink);
-    border-color:var(--muted);
-  }
+  .tool:hover { opacity:1; }
 }
-.player.hide-translations .cn {
-  display:none;
+.translations {
+  display:block;
+  height:auto;
+  /* Fade the whole text instead of revealing it through a moving clip edge. */
+  overflow:visible;
+  opacity:1;
+  /* Heights are driven in the same frame as the visual-middle compensation. */
 }
-@media(max-width:620px) {
-  .toolbar {
-    margin-top:12px;
-  }
-  .tool {
-    min-height:40px;
-    padding:0 12px;
-  }
-}
+.translation-content { display:block; overflow:hidden; }
+.player.hide-translations .translations { height:0; opacity:0; }
+.line:active { transform:scale(.985); }
 @media(prefers-reduced-motion:reduce) {
-  .tool,.toggle-dot {
-    transition:none;
-  }
+  .tool,.translation-outline,.translation-filled,.translations { transition:none; }
+  .translations,.line:active { transform:none; }
 }
+.cover img:not([src]) { visibility:hidden; }
 
-.cover img:not([src]) { visibility: hidden; }
+.player.no-lyrics { grid-template-columns:minmax(0,420px); justify-content:center; }
+.lyrics.is-untimed .line { opacity:.75; filter:none; cursor:default; user-select:text; }
